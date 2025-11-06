@@ -6,17 +6,6 @@ interface AudioRecorderProps {
   onDescriptionChange: (description: string) => void;
 }
 
-// Augment the window object to include vendor-prefixed SpeechRecognition APIs
-// Using 'any' is a robust way to avoid build errors if the environment's built-in
-// TypeScript DOM types are incomplete or conflict.
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
-
-
 const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) => {
   const [description, setDescription] = useState('');
   const [isRecording, setIsRecording] = useState(false);

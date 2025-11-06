@@ -1,4 +1,3 @@
-
 // This file can be used to define shared TypeScript types and interfaces.
 // For example:
 //
@@ -25,5 +24,13 @@ interface AIStudio {
 declare global {
   interface Window {
     aistudio: AIStudio;
+    // Add vendor-prefixed SpeechRecognition types to the global Window object.
+    // Using 'any' is a robust way to handle browser-specific APIs that may not
+    // have standard TypeScript definitions.
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
   }
 }
+
+// FIX: Add an empty export to treat this file as a module. This allows 'declare global' to augment the global scope.
+export {};
