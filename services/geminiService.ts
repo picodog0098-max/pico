@@ -2,12 +2,15 @@
 import { GoogleGenAI, Modality } from '@google/genai';
 
 function getAiClient() {
-  if (!process.env.API_KEY) {
-    // This error should be caught by the UI which prompts for a key.
-    throw new Error("API_KEY environment variable not set");
+  // Prioritize AI Studio's injected key, fall back to manually entered key
+  const apiKey = process.env.API_KEY || window.MANUAL_API_KEY;
+
+  if (!apiKey) {
+    // This should now only happen if the user gets past the key screen somehow.
+    throw new Error("API key not available. Please provide an API key.");
   }
   // Create a new client for each call to ensure the latest key is used.
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return new GoogleGenAI({ apiKey });
 }
 
 export async function* streamAnalyzeDog(imageBase64: string, soundDescription: string) {

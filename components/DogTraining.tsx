@@ -7,6 +7,14 @@ interface DogTrainingProps {
   onInvalidKey: () => void;
 }
 
+const isApiKeyError = (err: any): boolean => {
+    const message = err?.message?.toLowerCase() || '';
+    return message.includes('api key not valid') || 
+           message.includes('requested entity was not found') ||
+           message.includes('api key not available');
+};
+
+
 const DogTraining: React.FC<DogTrainingProps> = ({ onInvalidKey }) => {
   const [question, setQuestion] = useState('');
   const [advice, setAdvice] = useState('');
@@ -28,7 +36,7 @@ const DogTraining: React.FC<DogTrainingProps> = ({ onInvalidKey }) => {
         setAdvice(prev => prev + chunk);
       }
     } catch (err: any) {
-      if (err?.message?.includes('Requested entity was not found')) {
+      if (isApiKeyError(err)) {
         onInvalidKey();
       } else {
         setError('خطا در دریافت مشاوره. لطفاً دوباره تلاش کنید.');

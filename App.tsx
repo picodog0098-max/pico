@@ -3,19 +3,28 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import CameraFeed from './components/CameraFeed';
 import AudioRecorder from './components/AudioRecorder';
 import AnalysisResult from './components/AnalysisResult';
-import { streamAnalyzeDog, textToSpeech } from './services/geminiService';
+import { streamAnalyzeDog, textToSpeech, streamGetTrainingAdvice } from './services/geminiService';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import { KeyIcon, PawPrintIcon } from './components/icons';
 import DogTraining from './components/DogTraining';
 import { splitIntoSentences } from './utils/textUtils';
 
 type AudioStatus = 'idle' | 'generating' | 'playing';
+type KeyStatus = 'checking' | 'needsAistudio' | 'needsManual' | 'ready';
 
-// Fix: The global declaration for 'aistudio' was moved to types.ts to avoid conflicts
-// with other potential declarations and centralize global type definitions.
+const isAistudioEnv = () => typeof window.aistudio?.hasSelectedApiKey === 'function';
+
+const isApiKeyError = (err: any): boolean => {
+    const message = err?.message?.toLowerCase() || '';
+    return message.includes('api key not valid') || 
+           message.includes('requested entity was not found') ||
+           message.includes('api key not available');
+};
 
 const App: React.FC = () => {
-  const [isKeySelected, setIsKeySelected] = useState(false);
+  const [keyStatus, setKeyStatus] = useState<KeyStatus>('checking');
+  const [manualApiKey, setManualApiKey] = useState('');
+  
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [soundDescription, setSoundDescription] = useState<string>('');
   const [analysis, setAnalysis] = useState<string>('');
@@ -26,34 +35,51 @@ const App: React.FC = () => {
   const { playAudio, stopAudio } = useAudioPlayer();
   const stopReadingRef = useRef(false);
 
-  // Check for API key on initial load
   useEffect(() => {
-    const checkApiKey = async () => {
-      if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setIsKeySelected(hasKey);
-      } else {
-        // Fallback for environments where aistudio is not available
-        // For local development, we might assume a key is in process.env
-        setIsKeySelected(!!process.env.API_KEY);
-      }
+    const checkKeyStatus = async () => {
+        if (isAistudioEnv()) {
+            const hasKey = await window.aistudio.hasSelectedApiKey();
+            setKeyStatus(hasKey ? 'ready' : 'needsAistudio');
+        } else {
+            // For Netlify/other envs.
+            if (window.MANUAL_API_KEY) {
+                setKeyStatus('ready');
+            } else {
+                setKeyStatus('needsManual');
+            }
+        }
     };
-    checkApiKey();
+    // Give it a moment to avoid flashing content
+    setTimeout(checkKeyStatus, 500);
   }, []);
 
   const handleSelectKey = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
-      // Assume success and update UI immediately to avoid race conditions
-      setIsKeySelected(true);
+      setKeyStatus('ready');
       setError('');
     }
   };
 
-  const handleInvalidKey = () => {
-    setError('کلید API نامعتبر است. لطفاً یک کلید جدید انتخاب کنید.');
-    setIsKeySelected(false);
+  const handleManualKeySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualApiKey.trim()) {
+        window.MANUAL_API_KEY = manualApiKey.trim();
+        setKeyStatus('ready');
+        setError('');
+    } else {
+        setError('لطفاً یک API Key معتبر وارد کنید.');
+    }
   };
+
+  const handleInvalidKey = useCallback(() => {
+    if (isAistudioEnv()) {
+        setKeyStatus('needsAistudio');
+    } else {
+        window.MANUAL_API_KEY = undefined;
+        setKeyStatus('needsManual');
+    }
+  }, []);
 
   const handleAnalyze = useCallback(async () => {
     if (!capturedImage || !soundDescription) {
@@ -70,7 +96,7 @@ const App: React.FC = () => {
         setAnalysis(prev => prev + chunk);
       }
     } catch (err: any) {
-      if (err?.message?.includes('Requested entity was not found')) {
+      if (isApiKeyError(err)) {
         handleInvalidKey();
       } else {
         setError('خطا در تحلیل. لطفاً دوباره تلاش کنید.');
@@ -79,7 +105,7 @@ const App: React.FC = () => {
     } finally {
       setIsStreamingAnalysis(false);
     }
-  }, [capturedImage, soundDescription]);
+  }, [capturedImage, soundDescription, handleInvalidKey]);
 
   const handleReadAloud = useCallback(async () => {
     if (!analysis || audioStatus !== 'idle') return;
@@ -100,19 +126,19 @@ const App: React.FC = () => {
         await playAudio(audioBase64);
 
       } catch (err: any) {
-        if (err?.message?.includes('Requested entity was not found')) {
+        if (isApiKeyError(err)) {
           handleInvalidKey();
           break;
         } else {
           setError('خطا در پخش صدا. لطفاً دوباره تلاش کنید.');
           console.error(err);
-          break; // Stop on error
+          break;
         }
       }
     }
     setAudioStatus('idle');
 
-  }, [analysis, playAudio, audioStatus]);
+  }, [analysis, playAudio, audioStatus, handleInvalidKey]);
 
   const handleStopReading = useCallback(() => {
     stopReadingRef.current = true;
@@ -122,21 +148,42 @@ const App: React.FC = () => {
 
   const isAnalyzeButtonEnabled = !isStreamingAnalysis && !!capturedImage && !!soundDescription;
 
-  if (!isKeySelected) {
+  const renderKeyScreen = (type: 'needsAistudio' | 'needsManual') => {
+    const isManual = type === 'needsManual';
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 text-white">
         <div className="w-full max-w-md bg-black/30 backdrop-blur-lg border border-cyan-500/20 rounded-2xl shadow-2xl p-8 text-center animate-fade-in">
           <KeyIcon className="w-16 h-16 mx-auto text-cyan-300 mb-4" />
           <h2 className="text-2xl font-bold mb-3 text-white">API Key مورد نیاز است</h2>
           <p className="text-slate-400 mb-6">
-            برای استفاده از قابلیت‌های هوش مصنوعی این اپلیکیشن، لطفاً یک API Key معتبر انتخاب کنید.
+            {isManual 
+              ? 'برای استفاده از این اپلیکیشن، لطفاً Gemini API Key خود را وارد کنید.'
+              : 'برای استفاده از قابلیت‌های هوش مصنوعی، لطفاً یک API Key معتبر انتخاب کنید.'}
           </p>
-          <button
-            onClick={handleSelectKey}
-            className="w-full px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-lg rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 animate-pulse-glow-cyan"
-          >
-            انتخاب API Key
-          </button>
+          {isManual ? (
+            <form onSubmit={handleManualKeySubmit} className="space-y-4">
+              <input
+                type="password"
+                value={manualApiKey}
+                onChange={(e) => setManualApiKey(e.target.value)}
+                placeholder="Gemini API Key خود را اینجا وارد کنید"
+                className="w-full p-3 bg-slate-800/60 text-white rounded-md border border-slate-700 focus:ring-2 focus:ring-fuchsia-400 focus:outline-none transition"
+              />
+              <button
+                type="submit"
+                className="w-full px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-lg rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 animate-pulse-glow-cyan"
+              >
+                ذخیره و ادامه
+              </button>
+            </form>
+          ) : (
+            <button
+              onClick={handleSelectKey}
+              className="w-full px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-lg rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 animate-pulse-glow-cyan"
+            >
+              انتخاب API Key
+            </button>
+          )}
           <a 
             href="https://ai.google.dev/gemini-api/docs/billing" 
             target="_blank" 
@@ -149,6 +196,19 @@ const App: React.FC = () => {
         </div>
       </div>
     );
+  };
+
+  if (keyStatus === 'checking') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-white">
+          <PawPrintIcon className="w-24 h-24 text-cyan-400 animate-pulse" />
+          <p className="mt-4 text-lg text-slate-400">در حال بررسی API Key...</p>
+      </div>
+    );
+  }
+
+  if (keyStatus === 'needsAistudio' || keyStatus === 'needsManual') {
+    return renderKeyScreen(keyStatus);
   }
 
   return (
