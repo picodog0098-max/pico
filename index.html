@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تحلیلگر رفتار سگ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap');
+      body {
+        font-family: 'Vazirmatn', sans-serif;
+        overflow-x: hidden; /* Prevent horizontal scroll from paws leaving screen */
+        background-color: #0c0a09;
+        background-image: radial-gradient(at 20% 80%, hsla(217, 60%, 15%, 1) 0px, transparent 50%),
+                          radial-gradient(at 80% 10%, hsla(289, 50%, 20%, 1) 0px, transparent 50%),
+                          radial-gradient(at 50% 50%, hsla(190, 70%, 25%, 0.5) 0px, transparent 50%);
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.5s ease-out forwards;
+      }
+      @keyframes pulse-glow-cyan {
+        0%, 100% { box-shadow: 0 0 5px #06b6d4, 0 0 10px #06b6d4, 0 0 15px #22d3ee; }
+        50% { box-shadow: 0 0 10px #06b6d4, 0 0 20px #22d3ee, 0 0 30px #67e8f9; }
+      }
+      .animate-pulse-glow-cyan { animation: pulse-glow-cyan 2.5s infinite alternate; }
+
+      @keyframes pulse-glow-fuchsia {
+        0%, 100% { box-shadow: 0 0 5px #c026d3, 0 0 10px #c026d3, 0 0 15px #d946ef; }
+        50% { box-shadow: 0 0 10px #c026d3, 0 0 20px #d946ef, 0 0 30px #e879f9; }
+      }
+      .animate-pulse-glow-fuchsia { animation: pulse-glow-fuchsia 2.5s infinite alternate; }
+
+      @keyframes pulse-glow-rose {
+        0%, 100% { box-shadow: 0 0 5px #e11d48, 0 0 10px #e11d48, 0 0 15px #f43f5e; }
+        50% { box-shadow: 0 0 10px #e11d48, 0 0 20px #f43f5e, 0 0 30px #fb7185; }
+      }
+      .animate-pulse-glow-rose { animation: pulse-glow-rose 2.5s infinite alternate; }
+
+      /* Paw Animations from user request */
+      @keyframes paw-walk-1 {
+          0% { transform: translate(0, 0) rotate(-15deg); opacity: 0; }
+          10% { opacity: 0.15; }
+          90% { opacity: 0.15; }
+          100% { transform: translate(200px, -650px) rotate(20deg); opacity: 0; }
+      }
+      @keyframes paw-walk-2 {
+          0% { transform: translate(0, 0) rotate(10deg); opacity: 0; }
+          10% { opacity: 0.1; }
+          90% { opacity: 0.1; }
+          100% { transform: translate(-150px, -720px) rotate(-25deg); opacity: 0; }
+      }
+      @keyframes paw-walk-3 {
+          0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+          10% { opacity: 0.2; }
+          90% { opacity: 0.2; }
+          100% { transform: translate(50px, -680px) rotate(5deg); opacity: 0; }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="paw-background-container" class="fixed inset-0 w-full h-full overflow-hidden z-[-1] pointer-events-none">
+      <svg class="hidden">
+        <defs>
+          <symbol id="paw-print" viewBox="0 0 100 100">
+            <circle cx="20" cy="30" r="12" />
+            <circle cx="40" cy="15" r="12" />
+            <circle cx="60" cy="15" r="12" />
+            <circle cx="80" cy="30" r="12" />
+            <path d="M 20,50 A 30 30 0 0 1 80,50 A 40 45 0 0 0 20,50 Z" />
+          </symbol>
+        </defs>
+      </svg>
+      
+      <!-- New paw elements based on user request -->
+      <div class="absolute text-cyan-400" style="width: 40px; top: 105%; left: 5%; animation: paw-walk-1 12s linear infinite;">
+        <svg fill="currentColor" class="w-full h-full"><use href="#paw-print"></use></svg>
+      </div>
+      <div class="absolute text-cyan-400" style="width: 32px; top: 105%; left: 20%; animation: paw-walk-2 11s linear infinite; animation-delay: 1s;">
+        <svg fill="currentColor" class="w-full h-full"><use href="#paw-print"></use></svg>
+      </div>
+      <div class="absolute text-cyan-400" style="width: 48px; top: 105%; left: 35%; animation: paw-walk-3 14s linear infinite; animation-delay: 2.5s;">
+        <svg fill="currentColor" class="w-full h-full"><use href="#paw-print"></use></svg>
+      </div>
+      <div class="absolute text-cyan-400" style="width: 38px; top: 105%; left: 55%; animation: paw-walk-1 10s linear infinite; animation-delay: 4.5s;">
+        <svg fill="currentColor" class="w-full h-full"><use href="#paw-print"></use></svg>
+      </div>
+      <div class="absolute text-cyan-400" style="width: 55px; top: 105%; left: 75%; animation: paw-walk-2 13s linear infinite; animation-delay: 6s;">
+        <svg fill="currentColor" class="w-full h-full"><use href="#paw-print"></use></svg>
+      </div>
+      <div class="absolute text-cyan-400" style="width: 30px; top: 105%; left: 90%; animation: paw-walk-3 11s linear infinite; animation-delay: 7.5s;">
+        <svg fill="currentColor" class="w-full h-full"><use href="#paw-print"></use></svg>
+      </div>
+    </div>
+
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,118 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { MicrophoneIcon } from './icons';
+
+// Define the interface for the component props
+interface AudioRecorderProps {
+  onDescriptionChange: (description: string) => void;
+}
+
+// Augment the window object to include vendor-prefixed SpeechRecognition APIs
+// Using 'any' is a robust way to avoid build errors if the environment's built-in
+// TypeScript DOM types are incomplete or conflict.
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+
+const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) => {
+  const [description, setDescription] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
+  const recognitionRef = useRef<any | null>(null);
+
+  useEffect(() => {
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognitionAPI) {
+      setIsSupported(true);
+      const recognition = new SpeechRecognitionAPI();
+      recognition.continuous = false;
+      recognition.lang = 'fa-IR';
+      recognition.interimResults = false;
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setDescription(transcript);
+        onDescriptionChange(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        // Optionally show an error to the user
+      };
+      
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognitionRef.current = recognition;
+    } else {
+      setIsSupported(false);
+      console.warn('Speech recognition not supported in this browser.');
+    }
+  }, [onDescriptionChange]);
+
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newDescription = e.target.value;
+    setDescription(newDescription);
+    onDescriptionChange(newDescription);
+  };
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) return;
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+    } else {
+      // Clear previous description before starting a new recording
+      setDescription('');
+      onDescriptionChange('');
+      recognitionRef.current.start();
+      setIsRecording(true);
+    }
+  };
+
+  return (
+    <div className="bg-slate-900/40 border border-cyan-900/50 p-4 rounded-xl shadow-lg flex flex-col items-center justify-center space-y-4 h-full transition-all duration-300 ease-in-out hover:scale-[1.02] hover:border-cyan-500/80 hover:shadow-xl hover:shadow-cyan-500/20">
+      <h2 className="text-xl font-bold text-cyan-200">۲. توصیف صدا</h2>
+      <div className="w-full flex flex-col items-center justify-center flex-grow text-center space-y-3">
+        <p className="text-slate-400 px-2">
+            برای توصیف صدای سگ، دکمه میکروفون را فشار دهید و صحبت کنید، یا در کادر زیر تایپ کنید.
+        </p>
+
+        {isSupported ? (
+          <>
+            <button
+              onClick={toggleRecording}
+              className={`p-4 rounded-full transition-all duration-300 ease-in-out transform hover:scale-110 ${
+                isRecording
+                  ? 'bg-rose-600 animate-pulse'
+                  : 'bg-cyan-600 hover:bg-cyan-700 animate-pulse-glow-cyan'
+              }`}
+              aria-label={isRecording ? 'توقف توصیف صوتی' : 'شروع توصیف صوتی'}
+            >
+              <MicrophoneIcon className="w-8 h-8 text-white" />
+            </button>
+            <p className="text-cyan-300 h-6 text-lg">
+              {isRecording ? 'در حال گوش دادن...' : ''}
+            </p>
+          </>
+        ) : (
+            <p className="text-yellow-400 text-sm">تشخیص گفتار در این مرورگر پشتیبانی نمی‌شود.</p>
+        )}
+        
+        <textarea
+          value={description}
+          onChange={handleDescriptionChange}
+          placeholder="مثلاً: پارس‌های کوتاه و سریع..."
+          className="w-full h-24 p-2 bg-slate-800/60 text-white rounded-md border border-slate-700 focus:ring-2 focus:ring-fuchsia-400 focus:outline-none transition"
+        />
+      </div>
+    </div>
+  );
+};
+
+export default AudioRecorder;
