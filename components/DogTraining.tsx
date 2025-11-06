@@ -3,7 +3,11 @@ import React, { useState } from 'react';
 import { streamGetTrainingAdvice } from '../services/geminiService';
 import { BookOpenIcon, PawPrintIcon } from './icons';
 
-const DogTraining: React.FC = () => {
+interface DogTrainingProps {
+  onInvalidKey: () => void;
+}
+
+const DogTraining: React.FC<DogTrainingProps> = ({ onInvalidKey }) => {
   const [question, setQuestion] = useState('');
   const [advice, setAdvice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,9 +27,13 @@ const DogTraining: React.FC = () => {
       for await (const chunk of stream) {
         setAdvice(prev => prev + chunk);
       }
-    } catch (err) {
-      setError('خطا در دریافت مشاوره. لطفاً دوباره تلاش کنید.');
-      console.error(err);
+    } catch (err: any) {
+      if (err?.message?.includes('Requested entity was not found')) {
+        onInvalidKey();
+      } else {
+        setError('خطا در دریافت مشاوره. لطفاً دوباره تلاش کنید.');
+        console.error(err);
+      }
     } finally {
       setIsLoading(false);
     }

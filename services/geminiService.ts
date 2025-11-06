@@ -1,13 +1,17 @@
 
 import { GoogleGenAI, Modality } from '@google/genai';
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set");
+function getAiClient() {
+  if (!process.env.API_KEY) {
+    // This error should be caught by the UI which prompts for a key.
+    throw new Error("API_KEY environment variable not set");
+  }
+  // Create a new client for each call to ensure the latest key is used.
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export async function* streamAnalyzeDog(imageBase64: string, soundDescription: string) {
+  const ai = getAiClient();
   const imagePart = {
     inlineData: {
       mimeType: 'image/jpeg',
@@ -37,6 +41,7 @@ export async function* streamAnalyzeDog(imageBase64: string, soundDescription: s
 }
 
 export const textToSpeech = async (text: string): Promise<string> => {
+  const ai = getAiClient();
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
     contents: [{ parts: [{ text: `Say this in a friendly tone: ${text}` }] }],
@@ -59,6 +64,7 @@ export const textToSpeech = async (text: string): Promise<string> => {
 
 
 export async function* streamGetTrainingAdvice(question: string) {
+  const ai = getAiClient();
   const textPart = {
     text: `شما یک پروفسور برجسته دامپزشکی و یک مربی سگ در سطح جهانی هستید که به خاطر روش‌های انسانی، مبتنی بر علم و تقویت مثبت شهرت دارید. یک صاحب سگ سوالی از شما دارد. سوال او این است: «${question}».
 یک راهنمای واضح، گام به گام و دلگرم کننده برای کمک به او ارائه دهید. آموزش را به مراحل ساده و قابل مدیریت تقسیم کنید. بر صبر، ثبات و اهمیت ارتباط مثبت بین سگ و صاحبش تاکید کنید. پاسخ خود را به زبان فارسی، با لحنی حرفه‌ای و در عین حال قابل فهم بنویسید.`,
