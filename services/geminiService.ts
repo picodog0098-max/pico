@@ -1,15 +1,10 @@
 
 import { GoogleGenAI, Modality } from '@google/genai';
 
-// The user-provided API key is now hardcoded.
-const API_KEY = "AIzaSyCXLCE-I2K0SQfLHybizaB9diP-pxMKQa0";
-
 function getAiClient() {
-  if (!API_KEY) {
-    throw new Error("API key not available. Please provide an API key.");
-  }
-  // Create a new client for each call to ensure the latest key is used.
-  return new GoogleGenAI({ apiKey: API_KEY });
+  // The API key is injected by the execution environment and is assumed to be available.
+  // Using process.env.API_KEY is the correct and secure way to access it.
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 }
 
 export async function* streamAnalyzeDog(imageBase64: string, soundDescription: string) {
