@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
-import { streamGetTrainingAdvice, ApiKeyError } from '../services/geminiService';
+import { streamGetTrainingAdvice } from '../services/geminiService';
 import { BookOpenIcon, PawPrintIcon } from './icons';
 
-interface DogTrainingProps {
-    onKeyInvalidated: (message?: string) => void;
-}
-
-const DogTraining: React.FC<DogTrainingProps> = ({ onKeyInvalidated }) => {
+const DogTraining: React.FC = () => {
   const [question, setQuestion] = useState('');
   const [advice, setAdvice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,13 +23,9 @@ const DogTraining: React.FC<DogTrainingProps> = ({ onKeyInvalidated }) => {
         setAdvice(prev => prev + chunk);
       }
     } catch (err: any) {
-      if (err instanceof ApiKeyError) {
-        onKeyInvalidated(err.message);
-      } else {
-        const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-        setError(`خطا در دریافت مشاوره: ${displayMessage}`);
-        console.error(err);
-      }
+      const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+      setError(`خطا در دریافت مشاوره: ${displayMessage}`);
+      console.error(err);
     } finally {
       setIsLoading(false);
     }

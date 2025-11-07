@@ -1,19 +1,16 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import CameraFeed from './components/CameraFeed';
 import AudioRecorder from './components/AudioRecorder';
 import AnalysisResult from './components/AnalysisResult';
-import { streamAnalyzeDog, textToSpeech, ApiKeyError } from './services/geminiService';
+import { streamAnalyzeDog, textToSpeech } from './services/geminiService';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
-import { KeyIcon, PawPrintIcon } from './components/icons';
+import { PawPrintIcon } from './components/icons';
 import DogTraining from './components/DogTraining';
 import { splitIntoSentences } from './utils/textUtils';
-import Loader from './components/Loader';
 
 type AudioStatus = 'idle' | 'generating' | 'playing';
-type ApiKeyStatus = 'checking' | 'ready' | 'needed';
 
 const App: React.FC = () => {
-  const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatus>('checking');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [soundDescription, setSoundDescription] = useState<string>('');
   const [analysis, setAnalysis] = useState<string>('');
@@ -23,35 +20,6 @@ const App: React.FC = () => {
   const [audioStatus, setAudioStatus] = useState<AudioStatus>('idle');
   const { playAudio, stopAudio } = useAudioPlayer();
   const stopReadingRef = useRef(false);
-
-  useEffect(() => {
-    const checkApiKey = async () => {
-      if (window.aistudio && await window.aistudio.hasSelectedApiKey()) {
-        setApiKeyStatus('ready');
-      } else {
-        setApiKeyStatus('needed');
-      }
-    };
-    checkApiKey();
-  }, []);
-
-  const onKeyInvalidated = useCallback((message?: string) => {
-      setError(message || 'کلید API نامعتبر است یا تنظیم نشده است. لطفاً یک کلید جدید انتخاب کنید.');
-      setApiKeyStatus('needed');
-  }, []);
-
-  const handleSelectKey = async () => {
-    if (window.aistudio) {
-      // Prompt the user to select a key.
-      await window.aistudio.openSelectKey();
-      
-      // To avoid a race condition where `hasSelectedApiKey` might not be immediately true,
-      // we optimistically assume the user selected a key. If the key is invalid,
-      // the next API call will fail, and `onKeyInvalidated` will reset the status.
-      setApiKeyStatus('ready');
-      setError('');
-    }
-  };
 
   const handleAnalyze = useCallback(async () => {
     if (!capturedImage || !soundDescription) {
@@ -68,17 +36,13 @@ const App: React.FC = () => {
         setAnalysis(prev => prev + chunk);
       }
     } catch (err: any) {
-       if (err instanceof ApiKeyError) {
-         onKeyInvalidated(err.message);
-       } else {
-         const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-         setError(`خطا در تحلیل: ${displayMessage}`);
-         console.error(err);
-       }
+       const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+       setError(`خطا در تحلیل: ${displayMessage}`);
+       console.error(err);
     } finally {
       setIsStreamingAnalysis(false);
     }
-  }, [capturedImage, soundDescription, onKeyInvalidated]);
+  }, [capturedImage, soundDescription]);
 
   const handleReadAloud = useCallback(async () => {
     if (!analysis || audioStatus !== 'idle') return;
@@ -99,19 +63,15 @@ const App: React.FC = () => {
         await playAudio(audioBase64);
 
       } catch (err: any) {
-        if (err instanceof ApiKeyError) {
-            onKeyInvalidated(err.message);
-        } else {
-            const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-            setError(`خطا در پخش صدا: ${displayMessage}`);
-            console.error(err);
-        }
+        const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+        setError(`خطا در پخش صدا: ${displayMessage}`);
+        console.error(err);
         break; // Stop trying to read sentences if one fails
       }
     }
     setAudioStatus('idle');
 
-  }, [analysis, playAudio, audioStatus, onKeyInvalidated]);
+  }, [analysis, playAudio, audioStatus]);
 
   const handleStopReading = useCallback(() => {
     stopReadingRef.current = true;
@@ -120,46 +80,6 @@ const App: React.FC = () => {
   }, [stopAudio]);
 
   const isAnalyzeButtonEnabled = !isStreamingAnalysis && !!capturedImage && !!soundDescription;
-
-  if (apiKeyStatus === 'checking') {
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 text-white">
-            <Loader />
-            <p className="mt-4">در حال بررسی کلید API...</p>
-        </div>
-    );
-  }
-  
-  if (apiKeyStatus === 'needed') {
-      return (
-          <div className="min-h-screen flex flex-col items-center justify-center p-4 text-white">
-              <main className="w-full max-w-lg bg-black/30 backdrop-blur-lg border border-cyan-500/20 rounded-2xl shadow-2xl p-8 text-center animate-fade-in">
-                  <KeyIcon className="w-16 h-16 text-cyan-300 mx-auto mb-4" />
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-300 to-fuchsia-400 text-transparent bg-clip-text pb-2">
-                      کلید API مورد نیاز است
-                  </h1>
-                  <p className="text-slate-400 mt-4">
-                      برای استفاده از هوش مصنوعی Gemini، لطفاً کلید API خود را انتخاب کنید.
-                  </p>
-                  <p className="text-xs text-slate-500 mt-2">
-                      با استفاده از این سرویس، شما با شرایط استفاده و سیاست‌های مربوط به صورت‌حساب موافقت می‌کنید.
-                      <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline mx-1">
-                         اطلاعات بیشتر
-                      </a>
-                  </p>
-                  <button
-                      onClick={handleSelectKey}
-                      className="mt-6 px-8 py-3 bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-lg rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 animate-pulse-glow-cyan"
-                  >
-                      انتخاب کلید API
-                  </button>
-                   {error && (
-                      <p className="text-red-400 text-sm mt-4">{error}</p>
-                   )}
-              </main>
-          </div>
-      );
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 text-white">
@@ -217,7 +137,7 @@ const App: React.FC = () => {
             />
           )}
 
-          <DogTraining onKeyInvalidated={onKeyInvalidated} />
+          <DogTraining />
           
         </main>
       </div>
