@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { streamGetTrainingAdvice } from '../services/geminiService';
+import { streamGetTrainingAdvice, ApiKeyError } from '../services/geminiService';
 import { BookOpenIcon, PawPrintIcon } from './icons';
 
 interface DogTrainingProps {
-    onKeyInvalidated: () => void;
+    onKeyInvalidated: (message?: string) => void;
 }
 
 const DogTraining: React.FC<DogTrainingProps> = ({ onKeyInvalidated }) => {
@@ -27,9 +27,8 @@ const DogTraining: React.FC<DogTrainingProps> = ({ onKeyInvalidated }) => {
         setAdvice(prev => prev + chunk);
       }
     } catch (err: any) {
-      const errorMessage = err.message?.toLowerCase() || '';
-      if (errorMessage.includes('api key not valid') || errorMessage.includes('api key must be set')) {
-        onKeyInvalidated();
+      if (err instanceof ApiKeyError) {
+        onKeyInvalidated(err.message);
       } else {
         const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
         setError(`خطا در دریافت مشاوره: ${displayMessage}`);

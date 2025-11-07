@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import CameraFeed from './components/CameraFeed';
 import AudioRecorder from './components/AudioRecorder';
 import AnalysisResult from './components/AnalysisResult';
-import { streamAnalyzeDog, textToSpeech } from './services/geminiService';
+import { streamAnalyzeDog, textToSpeech, ApiKeyError } from './services/geminiService';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import { KeyIcon, PawPrintIcon } from './components/icons';
 import DogTraining from './components/DogTraining';
@@ -35,8 +35,8 @@ const App: React.FC = () => {
     checkApiKey();
   }, []);
 
-  const onKeyInvalidated = useCallback(() => {
-      setError('کلید API نامعتبر است یا تنظیم نشده است. لطفاً یک کلید جدید انتخاب کنید.');
+  const onKeyInvalidated = useCallback((message?: string) => {
+      setError(message || 'کلید API نامعتبر است یا تنظیم نشده است. لطفاً یک کلید جدید انتخاب کنید.');
       setApiKeyStatus('needed');
   }, []);
 
@@ -69,9 +69,8 @@ const App: React.FC = () => {
         setAnalysis(prev => prev + chunk);
       }
     } catch (err: any) {
-       const errorMessage = err.message?.toLowerCase() || '';
-       if (errorMessage.includes('api key not valid') || errorMessage.includes('api key must be set')) {
-         onKeyInvalidated();
+       if (err instanceof ApiKeyError) {
+         onKeyInvalidated(err.message);
        } else {
          const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
          setError(`خطا در تحلیل: ${displayMessage}`);
@@ -101,9 +100,8 @@ const App: React.FC = () => {
         await playAudio(audioBase64);
 
       } catch (err: any) {
-        const errorMessage = err.message?.toLowerCase() || '';
-        if (errorMessage.includes('api key not valid') || errorMessage.includes('api key must be set')) {
-            onKeyInvalidated();
+        if (err instanceof ApiKeyError) {
+            onKeyInvalidated(err.message);
         } else {
             const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
             setError(`خطا در پخش صدا: ${displayMessage}`);
