@@ -24,7 +24,7 @@ const DogTraining: React.FC = () => {
         setAdvice(prev => prev + chunk);
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'لطفاً دوباره تلاش کنید.';
+      const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
       setError(`خطا در دریافت مشاوره: ${errorMessage}`);
       console.error(err);
     } finally {

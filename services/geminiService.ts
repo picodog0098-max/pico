@@ -51,20 +51,29 @@ export const textToSpeech = async (text: string): Promise<string> => {
       },
     },
   });
+  
+  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  
+  if (base64Audio) {
+    return base64Audio;
+  }
 
+  // If no audio, investigate the reason for failure.
   if (response.promptFeedback?.blockReason) {
     throw new Error(`درخواست به دلیل خط‌مشی‌های ایمنی مسدود شد: ${response.promptFeedback.blockReason}`);
   }
-
-  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  if (!base64Audio) {
-    const finishReason = response.candidates?.[0]?.finishReason;
-    if (finishReason && finishReason !== 'STOP') {
-      throw new Error(`فراخوانی API به دلیل ${finishReason} متوقف شد.`);
-    }
-    throw new Error('دیتای صوتی از API دریافت نشد.');
+  
+  const finishReason = response.candidates?.[0]?.finishReason;
+  if (finishReason && finishReason !== 'STOP') {
+      if (finishReason === 'SAFETY') {
+          const safetyRatings = response.candidates?.[0]?.safetyRatings;
+          const blockedCategories = safetyRatings?.filter(r => r.blocked).map(r => r.category).join(', ');
+          throw new Error(`پاسخ به دلیل تنظیمات ایمنی مسدود شد. دسته‌بندی‌های مسدود شده: ${blockedCategories || 'نامشخص'}`);
+      }
+    throw new Error(`فراخوانی API به دلیل ${finishReason} متوقف شد.`);
   }
-  return base64Audio;
+
+  throw new Error('دیتای صوتی از API دریافت نشد. ممکن است پاسخ خالی باشد یا مشکلی رخ داده باشد.');
 };
 
 

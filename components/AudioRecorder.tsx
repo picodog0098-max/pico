@@ -27,6 +27,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) =>
         const transcript = event.results[0][0].transcript;
         setDescription(transcript);
         onDescriptionChange(transcript);
+        setRecognitionError(''); // Clear any previous error
       };
 
       recognition.onerror = (event: any) => {
@@ -37,11 +38,14 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) =>
                 errorMessage = 'هیچ صدایی شناسایی نشد. لطفاً دوباره تلاش کنید.';
                 break;
             case 'audio-capture':
-                errorMessage = 'خطا در دریافت صدا از میکروفون.';
+                errorMessage = 'خطا در دریافت صدا از میکروفون. لطفاً مطمئن شوید میکروفون دیگری از آن استفاده نمی‌کند.';
                 break;
             case 'not-allowed':
             case 'service-not-allowed':
                 errorMessage = 'دسترسی به میکروفون مجاز نیست. لطفاً مجوز را در تنظیمات مرورگر فعال کنید.';
+                break;
+            case 'network':
+                errorMessage = 'خطای شبکه رخ داد. لطفاً اتصال اینترنت خود را بررسی کنید.';
                 break;
             default:
                  errorMessage = `خطا در تشخیص گفتار: ${event.error}`;
@@ -71,16 +75,23 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) =>
 
   const toggleRecording = () => {
     if (!recognitionRef.current) return;
-    if (recognitionError) setRecognitionError('');
+    setRecognitionError('');
 
     if (isRecording) {
       recognitionRef.current.stop();
+      setIsRecording(false);
     } else {
       // Clear previous description before starting a new recording
       setDescription('');
       onDescriptionChange('');
-      recognitionRef.current.start();
-      setIsRecording(true);
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch(err) {
+        console.error("Error starting recognition:", err);
+        setRecognitionError('شروع ضبط با خطا مواجه شد.');
+        setIsRecording(false);
+      }
     }
   };
 
@@ -109,7 +120,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) =>
                 {isRecording ? (
                     <p className="text-cyan-300 animate-pulse">در حال گوش دادن...</p>
                 ) : recognitionError ? (
-                    <p className="text-red-400 text-sm">{recognitionError}</p>
+                    <p className="text-red-400 text-sm px-2">{recognitionError}</p>
                 ) : null}
             </div>
           </>

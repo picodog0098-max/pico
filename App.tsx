@@ -37,7 +37,7 @@ const App: React.FC = () => {
         setAnalysis(prev => prev + chunk);
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'لطفاً دوباره تلاش کنید.';
+      const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
       setError(`خطا در تحلیل: ${errorMessage}`);
       console.error(err);
     } finally {
@@ -64,7 +64,7 @@ const App: React.FC = () => {
         await playAudio(audioBase64);
 
       } catch (err: any) {
-        const errorMessage = err.message || 'لطفاً دوباره تلاش کنید.';
+        const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
         setError(`خطا در پخش صدا: ${errorMessage}`);
         console.error(err);
         break;
