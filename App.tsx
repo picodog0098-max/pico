@@ -6,7 +6,6 @@ import { streamAnalyzeDog, textToSpeech } from './services/geminiService';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import { PawPrintIcon } from './components/icons';
 import DogTraining from './components/DogTraining';
-import { splitIntoSentences } from './utils/textUtils';
 
 type AudioStatus = 'idle' | 'generating' | 'playing';
 
@@ -48,28 +47,26 @@ const App: React.FC = () => {
     if (!analysis || audioStatus !== 'idle') return;
     
     stopReadingRef.current = false;
-    const sentences = splitIntoSentences(analysis);
 
-    for (const sentence of sentences) {
-      if (stopReadingRef.current) break;
-      if (!sentence.trim()) continue;
+    try {
+      setAudioStatus('generating');
+      const audioBase64 = await textToSpeech(analysis);
 
-      try {
-        setAudioStatus('generating');
-        const audioBase64 = await textToSpeech(sentence);
-        if (stopReadingRef.current || !audioBase64) break;
-        
-        setAudioStatus('playing');
-        await playAudio(audioBase64);
-
-      } catch (err: any) {
-        const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-        setError(`خطا در پخش صدا: ${displayMessage}`);
-        console.error(err);
-        break; // Stop trying to read sentences if one fails
+      if (stopReadingRef.current || !audioBase64) {
+        setAudioStatus('idle');
+        return;
       }
+      
+      setAudioStatus('playing');
+      await playAudio(audioBase64);
+
+    } catch (err: any) {
+      const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+      setError(`خطا در پخش صدا: ${displayMessage}`);
+      console.error(err);
+    } finally {
+      setAudioStatus('idle');
     }
-    setAudioStatus('idle');
 
   }, [analysis, playAudio, audioStatus]);
 
