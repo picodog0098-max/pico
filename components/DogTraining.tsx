@@ -3,7 +3,11 @@ import React, { useState } from 'react';
 import { streamGetTrainingAdvice } from '../services/geminiService';
 import { BookOpenIcon, PawPrintIcon } from './icons';
 
-const DogTraining: React.FC = () => {
+interface DogTrainingProps {
+  onKeyInvalidated: () => void;
+}
+
+const DogTraining: React.FC<DogTrainingProps> = ({ onKeyInvalidated }) => {
   const [question, setQuestion] = useState('');
   const [advice, setAdvice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +29,10 @@ const DogTraining: React.FC = () => {
       }
     } catch (err: any) {
       const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+      if (errorMessage.includes('API Key') || errorMessage.includes('Requested entity was not found')) {
+        onKeyInvalidated();
+        return;
+      }
       setError(`خطا در دریافت مشاوره: ${errorMessage}`);
       console.error(err);
     } finally {
