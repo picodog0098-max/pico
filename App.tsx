@@ -1,24 +1,42 @@
-import React, { useState, useCallback, useRef } from 'react';
+
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import CameraFeed from './components/CameraFeed';
 import AudioRecorder from './components/AudioRecorder';
 import AnalysisResult from './components/AnalysisResult';
-import { streamAnalyzeDog, textToSpeech } from './services/geminiService';
-import { useAudioPlayer } from './hooks/useAudioPlayer';
-import { PawPrintIcon } from './components/icons';
+import { streamAnalyzeDog } from './services/geminiService';
 import DogTraining from './components/DogTraining';
+import { PawPrintIcon } from './components/icons';
 
 type AudioStatus = 'idle' | 'generating' | 'playing';
 
 const App: React.FC = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [soundDescription, setSoundDescription] = useState<string>('');
-  const [analysis, setAnalysis] = useState<string>('');
+  const [analysis, setAnalysis] = useState<string>(() => {
+    try {
+      return localStorage.getItem('lastAnalysis') || '';
+    } catch (error) {
+      console.error('Failed to read from localStorage', error);
+      return '';
+    }
+  });
   const [isStreamingAnalysis, setIsStreamingAnalysis] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   
   const [audioStatus, setAudioStatus] = useState<AudioStatus>('idle');
-  const { playAudio, stopAudio } = useAudioPlayer();
-  const stopReadingRef = useRef(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    try {
+      if (analysis) {
+        localStorage.setItem('lastAnalysis', analysis);
+      } else {
+        localStorage.removeItem('lastAnalysis');
+      }
+    } catch (error) {
+      console.error('Failed to write to localStorage', error);
+    }
+  }, [analysis]);
 
   const handleAnalyze = useCallback(async () => {
     if (!capturedImage || !soundDescription) {
@@ -43,38 +61,41 @@ const App: React.FC = () => {
     }
   }, [capturedImage, soundDescription]);
 
-  const handleReadAloud = useCallback(async () => {
-    if (!analysis || audioStatus !== 'idle') return;
+  const handleReadAloud = useCallback(() => {
+    if (!analysis || audioStatus !== 'idle' || !window.speechSynthesis) return;
+
+    const utterance = new SpeechSynthesisUtterance(analysis);
+    utterance.lang = 'fa-IR';
+    utterance.rate = 0.9;
     
-    stopReadingRef.current = false;
-
-    try {
-      setAudioStatus('generating');
-      const audioBase64 = await textToSpeech(analysis);
-
-      if (stopReadingRef.current || !audioBase64) {
-        setAudioStatus('idle');
-        return;
-      }
-      
+    utterance.onstart = () => {
       setAudioStatus('playing');
-      await playAudio(audioBase64);
-
-    } catch (err: any) {
-      const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-      setError(`خطا در پخش صدا: ${displayMessage}`);
-      console.error(err);
-    } finally {
+    };
+    
+    utterance.onend = () => {
       setAudioStatus('idle');
-    }
+      utteranceRef.current = null;
+    };
+    
+    utterance.onerror = (event) => {
+      console.error('SpeechSynthesis Error:', event.error);
+      setError(`خطا در پخش صدا: ${event.error}`);
+      setAudioStatus('idle');
+      utteranceRef.current = null;
+    };
+    
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
 
-  }, [analysis, playAudio, audioStatus]);
+  }, [analysis, audioStatus]);
 
   const handleStopReading = useCallback(() => {
-    stopReadingRef.current = true;
-    stopAudio();
-    setAudioStatus('idle');
-  }, [stopAudio]);
+    if (window.speechSynthesis && utteranceRef.current) {
+      window.speechSynthesis.cancel();
+      setAudioStatus('idle');
+      utteranceRef.current = null;
+    }
+  }, []);
 
   const isAnalyzeButtonEnabled = !isStreamingAnalysis && !!capturedImage && !!soundDescription;
 
