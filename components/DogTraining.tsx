@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { streamGetTrainingAdvice } from '../services/geminiService';
 import { BookOpenIcon, PawPrintIcon } from './icons';
 
 interface DogTrainingProps {
-  onKeyInvalidated: () => void;
+    onKeyInvalidated: () => void;
 }
 
 const DogTraining: React.FC<DogTrainingProps> = ({ onKeyInvalidated }) => {
@@ -28,13 +27,13 @@ const DogTraining: React.FC<DogTrainingProps> = ({ onKeyInvalidated }) => {
         setAdvice(prev => prev + chunk);
       }
     } catch (err: any) {
-      const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-      if (errorMessage.includes('API Key') || errorMessage.includes('Requested entity was not found')) {
+      if (err.message?.includes('API key not valid')) {
         onKeyInvalidated();
-        return;
+      } else {
+        const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+        setError(`خطا در دریافت مشاوره: ${errorMessage}`);
+        console.error(err);
       }
-      setError(`خطا در دریافت مشاوره: ${errorMessage}`);
-      console.error(err);
     } finally {
       setIsLoading(false);
     }
