@@ -1,17 +1,21 @@
 // This file can be used to define shared TypeScript types and interfaces.
 
-// FIX: Inlined the AIStudio type to resolve a "Subsequent property declarations must have the same type" error.
-// This kind of error often points to a naming conflict or module resolution problem with the interface name.
+// FIX: Resolve "Subsequent property declarations must have the same type" error.
+// This error means another global type has already declared `window.aistudio` using a named type `AIStudio`.
+// Using an inline/anonymous type here creates a conflict.
+// To fix this, we define an `AIStudio` interface and use it, aligning this declaration with the existing one.
+interface AIStudio {
+  hasSelectedApiKey: () => Promise<boolean>;
+  openSelectKey: () => Promise<void>;
+}
+
 declare global {
   interface Window {
     // Add vendor-prefixed SpeechRecognition types to the global Window object.
     SpeechRecognition: any;
     webkitSpeechRecognition: any;
     // Add aistudio for secure API key selection
-    aistudio?: {
-      hasSelectedApiKey: () => Promise<boolean>;
-      openSelectKey: () => Promise<void>;
-    };
+    aistudio?: AIStudio;
   }
 }
 

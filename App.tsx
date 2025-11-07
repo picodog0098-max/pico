@@ -36,16 +36,21 @@ const App: React.FC = () => {
   }, []);
 
   const onKeyInvalidated = useCallback(() => {
-      setError('کلید API نامعتبر است. لطفاً یک کلید جدید انتخاب کنید.');
+      setError('کلید API نامعتبر است یا تنظیم نشده است. لطفاً یک کلید جدید انتخاب کنید.');
       setApiKeyStatus('needed');
   }, []);
 
   const handleSelectKey = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
-      // Assume success and try to proceed. The API call will validate the key.
-      setApiKeyStatus('ready');
-      setError('');
+      // Re-check after the dialog is closed to be sure a key was selected.
+      if (await window.aistudio.hasSelectedApiKey()) {
+        setApiKeyStatus('ready');
+        setError('');
+      } else {
+        // User closed the dialog without selecting a key.
+        setError('کلید API انتخاب نشد. برای ادامه، لطفاً یک کلید انتخاب کنید.');
+      }
     }
   };
 
@@ -64,11 +69,12 @@ const App: React.FC = () => {
         setAnalysis(prev => prev + chunk);
       }
     } catch (err: any) {
-       if (err.message?.includes('API key not valid')) {
+       const errorMessage = err.message?.toLowerCase() || '';
+       if (errorMessage.includes('api key not valid') || errorMessage.includes('api key must be set')) {
          onKeyInvalidated();
        } else {
-         const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-         setError(`خطا در تحلیل: ${errorMessage}`);
+         const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+         setError(`خطا در تحلیل: ${displayMessage}`);
          console.error(err);
        }
     } finally {
@@ -95,11 +101,12 @@ const App: React.FC = () => {
         await playAudio(audioBase64);
 
       } catch (err: any) {
-        if (err.message?.includes('API key not valid')) {
+        const errorMessage = err.message?.toLowerCase() || '';
+        if (errorMessage.includes('api key not valid') || errorMessage.includes('api key must be set')) {
             onKeyInvalidated();
         } else {
-            const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-            setError(`خطا در پخش صدا: ${errorMessage}`);
+            const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+            setError(`خطا در پخش صدا: ${displayMessage}`);
             console.error(err);
         }
         break; // Stop trying to read sentences if one fails

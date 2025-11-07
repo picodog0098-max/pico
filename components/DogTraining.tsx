@@ -27,11 +27,12 @@ const DogTraining: React.FC<DogTrainingProps> = ({ onKeyInvalidated }) => {
         setAdvice(prev => prev + chunk);
       }
     } catch (err: any) {
-      if (err.message?.includes('API key not valid')) {
+      const errorMessage = err.message?.toLowerCase() || '';
+      if (errorMessage.includes('api key not valid') || errorMessage.includes('api key must be set')) {
         onKeyInvalidated();
       } else {
-        const errorMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-        setError(`خطا در دریافت مشاوره: ${errorMessage}`);
+        const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+        setError(`خطا در دریافت مشاوره: ${displayMessage}`);
         console.error(err);
       }
     } finally {
