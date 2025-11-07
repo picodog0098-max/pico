@@ -42,15 +42,14 @@ const App: React.FC = () => {
 
   const handleSelectKey = async () => {
     if (window.aistudio) {
+      // Prompt the user to select a key.
       await window.aistudio.openSelectKey();
-      // Re-check after the dialog is closed to be sure a key was selected.
-      if (await window.aistudio.hasSelectedApiKey()) {
-        setApiKeyStatus('ready');
-        setError('');
-      } else {
-        // User closed the dialog without selecting a key.
-        setError('کلید API انتخاب نشد. برای ادامه، لطفاً یک کلید انتخاب کنید.');
-      }
+      
+      // To avoid a race condition where `hasSelectedApiKey` might not be immediately true,
+      // we optimistically assume the user selected a key. If the key is invalid,
+      // the next API call will fail, and `onKeyInvalidated` will reset the status.
+      setApiKeyStatus('ready');
+      setError('');
     }
   };
 
