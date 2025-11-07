@@ -37,7 +37,8 @@ const App: React.FC = () => {
         setAnalysis(prev => prev + chunk);
       }
     } catch (err: any) {
-      setError('خطا در تحلیل. لطفاً دوباره تلاش کنید.');
+      const errorMessage = err.message || 'لطفاً دوباره تلاش کنید.';
+      setError(`خطا در تحلیل: ${errorMessage}`);
       console.error(err);
     } finally {
       setIsStreamingAnalysis(false);
@@ -63,7 +64,8 @@ const App: React.FC = () => {
         await playAudio(audioBase64);
 
       } catch (err: any) {
-        setError('خطا در پخش صدا. لطفاً دوباره تلاش کنید.');
+        const errorMessage = err.message || 'لطفاً دوباره تلاش کنید.';
+        setError(`خطا در پخش صدا: ${errorMessage}`);
         console.error(err);
         break;
       }
@@ -114,7 +116,18 @@ const App: React.FC = () => {
             </button>
           </div>
           
-          {error && <p className="text-center text-red-400 mt-4">{error}</p>}
+          {error && (
+            <div className="text-center text-red-300 mt-4 bg-red-900/40 border border-red-500/50 p-3 rounded-lg flex justify-between items-center animate-fade-in">
+              <span>{error}</span>
+              <button 
+                onClick={() => setError('')} 
+                className="mr-4 text-red-300 hover:text-white font-bold text-2xl leading-none transition-colors"
+                aria-label="بستن خطا"
+              >
+                &times;
+              </button>
+            </div>
+          )}
 
           {analysis && (
             <AnalysisResult

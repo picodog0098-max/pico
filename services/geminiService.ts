@@ -52,9 +52,17 @@ export const textToSpeech = async (text: string): Promise<string> => {
     },
   });
 
+  if (response.promptFeedback?.blockReason) {
+    throw new Error(`درخواست به دلیل خط‌مشی‌های ایمنی مسدود شد: ${response.promptFeedback.blockReason}`);
+  }
+
   const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
   if (!base64Audio) {
-    throw new Error('No audio data received from API.');
+    const finishReason = response.candidates?.[0]?.finishReason;
+    if (finishReason && finishReason !== 'STOP') {
+      throw new Error(`فراخوانی API به دلیل ${finishReason} متوقف شد.`);
+    }
+    throw new Error('دیتای صوتی از API دریافت نشد.');
   }
   return base64Audio;
 };

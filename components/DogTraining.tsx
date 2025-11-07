@@ -24,7 +24,8 @@ const DogTraining: React.FC = () => {
         setAdvice(prev => prev + chunk);
       }
     } catch (err: any) {
-      setError('خطا در دریافت مشاوره. لطفاً دوباره تلاش کنید.');
+      const errorMessage = err.message || 'لطفاً دوباره تلاش کنید.';
+      setError(`خطا در دریافت مشاوره: ${errorMessage}`);
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -57,7 +58,18 @@ const DogTraining: React.FC = () => {
         </button>
       </div>
       
-      {error && <p className="text-center text-red-400 mt-4">{error}</p>}
+      {error && (
+        <div className="text-center text-red-300 mt-4 bg-red-900/40 border border-red-500/50 p-3 rounded-lg flex justify-between items-center animate-fade-in">
+          <span>{error}</span>
+          <button 
+            onClick={() => setError('')} 
+            className="mr-4 text-red-300 hover:text-white font-bold text-2xl leading-none transition-colors"
+            aria-label="بستن خطا"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {advice && (
         <div className="mt-4 p-4 bg-black/30 rounded-md animate-fade-in">

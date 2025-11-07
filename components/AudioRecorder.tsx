@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MicrophoneIcon } from './icons';
 
@@ -10,6 +11,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) =>
   const [description, setDescription] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
+  const [recognitionError, setRecognitionError] = useState('');
   const recognitionRef = useRef<any | null>(null);
 
   useEffect(() => {
@@ -29,7 +31,23 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) =>
 
       recognition.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
-        // Optionally show an error to the user
+        let errorMessage = 'خطای ناشناخته در تشخیص گفتار رخ داد.';
+        switch (event.error) {
+            case 'no-speech':
+                errorMessage = 'هیچ صدایی شناسایی نشد. لطفاً دوباره تلاش کنید.';
+                break;
+            case 'audio-capture':
+                errorMessage = 'خطا در دریافت صدا از میکروفون.';
+                break;
+            case 'not-allowed':
+            case 'service-not-allowed':
+                errorMessage = 'دسترسی به میکروفون مجاز نیست. لطفاً مجوز را در تنظیمات مرورگر فعال کنید.';
+                break;
+            default:
+                 errorMessage = `خطا در تشخیص گفتار: ${event.error}`;
+        }
+        setRecognitionError(errorMessage);
+        setIsRecording(false);
       };
       
       recognition.onend = () => {
@@ -48,10 +66,12 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) =>
     const newDescription = e.target.value;
     setDescription(newDescription);
     onDescriptionChange(newDescription);
+    if (recognitionError) setRecognitionError('');
   };
 
   const toggleRecording = () => {
     if (!recognitionRef.current) return;
+    if (recognitionError) setRecognitionError('');
 
     if (isRecording) {
       recognitionRef.current.stop();
@@ -85,9 +105,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onDescriptionChange }) =>
             >
               <MicrophoneIcon className="w-8 h-8 text-white" />
             </button>
-            <p className="text-cyan-300 h-6 text-lg">
-              {isRecording ? 'در حال گوش دادن...' : ''}
-            </p>
+            <div className="h-6 text-lg">
+                {isRecording ? (
+                    <p className="text-cyan-300 animate-pulse">در حال گوش دادن...</p>
+                ) : recognitionError ? (
+                    <p className="text-red-400 text-sm">{recognitionError}</p>
+                ) : null}
+            </div>
           </>
         ) : (
             <p className="text-yellow-400 text-sm">تشخیص گفتار در این مرورگر پشتیبانی نمی‌شود.</p>
