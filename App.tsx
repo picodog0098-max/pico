@@ -1,27 +1,28 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import CameraFeed from './components/CameraFeed';
 import AudioRecorder from './components/AudioRecorder';
 import AnalysisResult from './components/AnalysisResult';
-import { streamAnalyzeDog, textToSpeech } from './services/geminiService';
+import { analyzeDog, textToSpeech } from './services/geminiService';
 import DogTraining from './components/DogTraining';
 import { PawPrintIcon } from './components/icons';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
+import { AnalysisResultData } from './types';
 
 type AudioStatus = 'idle' | 'generating' | 'playing';
 
 const App: React.FC = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [soundDescription, setSoundDescription] = useState<string>('');
-  const [analysis, setAnalysis] = useState<string>(() => {
+  const [analysis, setAnalysis] = useState<AnalysisResultData | null>(() => {
     try {
-      return localStorage.getItem('lastAnalysis') || '';
+      const saved = localStorage.getItem('lastAnalysis');
+      return saved ? JSON.parse(saved) : null;
     } catch (error) {
       console.error('Failed to read from localStorage', error);
-      return '';
+      return null;
     }
   });
-  const [isStreamingAnalysis, setIsStreamingAnalysis] = useState<boolean>(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   
   const { playAudio, stopAudio, isPlaying } = useAudioPlayer();
@@ -33,7 +34,7 @@ const App: React.FC = () => {
   useEffect(() => {
     try {
       if (analysis) {
-        localStorage.setItem('lastAnalysis', analysis);
+        localStorage.setItem('lastAnalysis', JSON.stringify(analysis));
       } else {
         localStorage.removeItem('lastAnalysis');
       }
@@ -47,33 +48,33 @@ const App: React.FC = () => {
       setError('لطفاً هم یک عکس بگیرید و هم صدای سگ را توصیف کنید.');
       return;
     }
-    setIsStreamingAnalysis(true);
+    setIsAnalyzing(true);
     setError('');
-    setAnalysis('');
+    setAnalysis(null);
 
     try {
-      const stream = streamAnalyzeDog(capturedImage, soundDescription);
-      for await (const chunk of stream) {
-        setAnalysis(prev => prev + chunk);
-      }
+      const result = await analyzeDog(capturedImage, soundDescription);
+      setAnalysis(result);
     } catch (err: any) {
        const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
        setError(`خطا در تحلیل: ${displayMessage}`);
        console.error(err);
     } finally {
-      setIsStreamingAnalysis(false);
+      setIsAnalyzing(false);
     }
   }, [capturedImage, soundDescription]);
 
   const handleReadAloud = useCallback(async () => {
     if (!analysis || audioStatus !== 'idle') return;
 
+    const textToRead = `احساس: ${analysis.emotion}. تحلیل رفتار: ${analysis.behavior_analysis}. توصیه: ${analysis.recommendation}.`;
+
     audioRequestCancelled.current = false;
     setIsGeneratingAudio(true);
     setError('');
 
     try {
-      const base64Audio = await textToSpeech(analysis);
+      const base64Audio = await textToSpeech(textToRead);
       if (base64Audio && !audioRequestCancelled.current) {
         await playAudio(base64Audio);
       }
@@ -95,7 +96,7 @@ const App: React.FC = () => {
   }, [stopAudio]);
 
 
-  const isAnalyzeButtonEnabled = !isStreamingAnalysis && !!capturedImage && !!soundDescription;
+  const isAnalyzeButtonEnabled = !isAnalyzing && !!capturedImage && !!soundDescription;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 text-white">
@@ -120,7 +121,7 @@ const App: React.FC = () => {
               disabled={!isAnalyzeButtonEnabled}
               className={`px-8 py-4 bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-600 text-white font-bold text-xl rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 disabled:cursor-not-allowed flex items-center justify-center mx-auto disabled:shadow-none ${isAnalyzeButtonEnabled ? 'animate-pulse-glow-cyan' : ''}`}
             >
-              {isStreamingAnalysis ? (
+              {isAnalyzing ? (
                 <div className="w-8 h-8 border-4 border-t-transparent border-white rounded-full animate-spin"></div>
               ) : (
                 <>
@@ -146,7 +147,7 @@ const App: React.FC = () => {
 
           {analysis && (
             <AnalysisResult
-              text={analysis}
+              analysis={analysis}
               onReadAloud={handleReadAloud}
               onStop={handleStopReading}
               audioStatus={audioStatus}

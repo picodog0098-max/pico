@@ -8,5 +8,11 @@ declare global {
   }
 }
 
+export interface AnalysisResultData {
+  emotion: string;
+  behavior_analysis: string;
+  recommendation: string;
+}
+
 // Add an empty export to treat this file as a module. This allows 'declare global' to augment the global scope.
 export {};

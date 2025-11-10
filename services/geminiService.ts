@@ -1,9 +1,9 @@
-
-import { GoogleGenAI, Modality, FinishReason } from "@google/genai";
+import { GoogleGenAI, Modality, FinishReason, Type } from "@google/genai";
+import { AnalysisResultData } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export async function* streamAnalyzeDog(imageBase64: string, soundDescription: string) {
+export async function analyzeDog(imageBase64: string, soundDescription: string): Promise<AnalysisResultData> {
     const model = 'gemini-2.5-flash';
     
     const imagePart = {
@@ -14,19 +14,43 @@ export async function* streamAnalyzeDog(imageBase64: string, soundDescription: s
     };
 
     const textPart = {
-      text: `این تصویر و توصیف صدای یک سگ است. رفتار او را به زبان فارسی تحلیل کن. تحلیل باید دقیق، مفید و بر اساس شواهد بصری و صوتی باشد و در نهایت در حدود ۸ خط خلاصه شود.
+      text: `این تصویر و توصیف صدای یک سگ است. رفتار او را به زبان فارسی تحلیل کن و نتیجه را در قالب یک شیء JSON با سه کلید ارائه بده: "emotion" (احساس اصلی سگ)، "behavior_analysis" (تحلیل دقیق رفتار)، و "recommendation" (یک توصیه برای صاحب سگ).
     توصیف صدا: "${soundDescription}"`,
     };
 
-    const response = await ai.models.generateContentStream({
+    const responseSchema = {
+      type: Type.OBJECT,
+      properties: {
+        emotion: { type: Type.STRING, description: 'احساس اصلی سگ' },
+        behavior_analysis: { type: Type.STRING, description: 'تحلیل دقیق رفتار سگ' },
+        recommendation: { type: Type.STRING, description: 'توصیه‌ای برای صاحب سگ' },
+      },
+      required: ['emotion', 'behavior_analysis', 'recommendation'],
+    };
+
+    const response = await ai.models.generateContent({
         model: model,
         contents: { parts: [imagePart, textPart] },
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema,
+        }
     });
 
-    for await (const chunk of response) {
-      yield chunk.text;
+    try {
+      const jsonText = response.text.trim();
+      const result = JSON.parse(jsonText);
+      if (result.emotion && result.behavior_analysis && result.recommendation) {
+        return result as AnalysisResultData;
+      } else {
+        throw new Error('پاسخ دریافتی ساختار مورد انتظار را ندارد.');
+      }
+    } catch (e) {
+      console.error("Error parsing JSON response:", e, "Raw response:", response.text);
+      throw new Error('خطا در تجزیه و تحلیل پاسخ از سرویس هوش مصنوعی.');
     }
 }
+
 
 export const textToSpeech = async (text: string): Promise<string> => {
   if (!text.trim()) return '';

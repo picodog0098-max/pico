@@ -1,17 +1,17 @@
-
 import React from 'react';
-import { VolumeUpIcon, LoadingSpinnerIcon, StopIcon } from './icons';
+import { VolumeUpIcon, LoadingSpinnerIcon, StopIcon, HeartIcon, ClipboardDocumentListIcon, SparklesIcon } from './icons';
+import { AnalysisResultData } from '../types';
 
 type AudioStatus = 'idle' | 'generating' | 'playing';
 
 interface AnalysisResultProps {
-  text: string;
+  analysis: AnalysisResultData;
   onReadAloud: () => void;
   onStop: () => void;
   audioStatus: AudioStatus;
 }
 
-const AnalysisResult: React.FC<AnalysisResultProps> = ({ text, onReadAloud, onStop, audioStatus }) => {
+const AnalysisResult: React.FC<AnalysisResultProps> = ({ analysis, onReadAloud, onStop, audioStatus }) => {
   const isReading = audioStatus === 'generating' || audioStatus === 'playing';
 
   const renderButtonContent = () => {
@@ -42,9 +42,41 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ text, onReadAloud, onSt
           {renderButtonContent()}
         </button>
       </div>
-      <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">
-        {text}
-      </p>
+      
+      <div className="space-y-6">
+        {/* Emotion Section */}
+        <div className="p-4 bg-black/20 rounded-lg border-l-4 border-fuchsia-500">
+          <div className="flex items-center mb-2">
+            <HeartIcon className="w-6 h-6 text-fuchsia-400 mr-3" />
+            <h4 className="text-lg font-semibold text-fuchsia-300">احساس</h4>
+          </div>
+          <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">
+            {analysis.emotion}
+          </p>
+        </div>
+
+        {/* Behavior Analysis Section */}
+        <div className="p-4 bg-black/20 rounded-lg border-l-4 border-cyan-500">
+          <div className="flex items-center mb-2">
+            <ClipboardDocumentListIcon className="w-6 h-6 text-cyan-400 mr-3" />
+            <h4 className="text-lg font-semibold text-cyan-300">تحلیل رفتار</h4>
+          </div>
+          <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">
+            {analysis.behavior_analysis}
+          </p>
+        </div>
+        
+        {/* Recommendation Section */}
+        <div className="p-4 bg-black/20 rounded-lg border-l-4 border-amber-500">
+          <div className="flex items-center mb-2">
+            <SparklesIcon className="w-6 h-6 text-amber-400 mr-3" />
+            <h4 className="text-lg font-semibold text-amber-300">توصیه</h4>
+          </div>
+          <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">
+            {analysis.recommendation}
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
