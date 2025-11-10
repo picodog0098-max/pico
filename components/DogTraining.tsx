@@ -23,8 +23,8 @@ const DogTraining: React.FC = () => {
         setAdvice(prev => prev + chunk);
       }
     } catch (err: any) {
-      const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-      setError(`خطا در دریافت مشاوره: ${displayMessage}`);
+      const errorMessage = err?.toString() || 'یک خطای ناشناخته رخ داد.';
+      setError(`خطا در دریافت مشاوره: ${errorMessage}`);
       console.error(err);
     } finally {
       setIsLoading(false);

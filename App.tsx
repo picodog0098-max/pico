@@ -42,6 +42,11 @@ const App: React.FC = () => {
       console.error('Failed to write to localStorage', error);
     }
   }, [analysis]);
+  
+  const handleApiError = useCallback((err: any) => {
+     const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+     setError(`خطا: ${displayMessage}`);
+  }, []);
 
   const handleAnalyze = useCallback(async () => {
     if (!capturedImage || !soundDescription) {
@@ -56,13 +61,12 @@ const App: React.FC = () => {
       const result = await analyzeDog(capturedImage, soundDescription);
       setAnalysis(result);
     } catch (err: any) {
-       const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-       setError(`خطا در تحلیل: ${displayMessage}`);
+       handleApiError(err);
        console.error(err);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [capturedImage, soundDescription]);
+  }, [capturedImage, soundDescription, handleApiError]);
 
   const handleReadAloud = useCallback(async () => {
     if (!analysis || audioStatus !== 'idle') return;
@@ -81,13 +85,12 @@ const App: React.FC = () => {
     } catch (err: any) {
       if (!audioRequestCancelled.current) {
         console.error('TTS or playback error:', err);
-        const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
-        setError(`خطا در تولید یا پخش صدا: ${displayMessage}`);
+        handleApiError(err);
       }
     } finally {
       setIsGeneratingAudio(false);
     }
-  }, [analysis, audioStatus, playAudio]);
+  }, [analysis, audioStatus, playAudio, handleApiError]);
 
   const handleStopReading = useCallback(() => {
     audioRequestCancelled.current = true;

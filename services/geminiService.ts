@@ -1,7 +1,20 @@
 import { GoogleGenAI, Modality, FinishReason, Type } from "@google/genai";
 import { AnalysisResultData } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// =======================================================================
+// هشدار: کلید API شما در اینجا به صورت هاردکد قرار گرفته است.
+// این روش برای محیط‌های توسعه مناسب است، اما برای محیط پروداکشن توصیه نمی‌شود.
+// لطفاً کلید API واقعی خود را جایگزین "YOUR_API_KEY_HERE" کنید.
+// =======================================================================
+const API_KEY = "YOUR_API_KEY_HERE";
+
+// این بخش بررسی می‌کند که آیا کلید API وارد شده است یا خیر.
+// اگر کلید وارد نشده باشد، برنامه با خطا متوقف می‌شود تا به شما یادآوری کند.
+if (API_KEY === "YOUR_API_KEY_HERE") {
+  throw new Error("لطفاً کلید API خود را در فایل services/geminiService.ts در متغیر API_KEY قرار دهید.");
+}
+
+const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 export async function analyzeDog(imageBase64: string, soundDescription: string): Promise<AnalysisResultData> {
     const model = 'gemini-2.5-flash';
