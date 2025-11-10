@@ -3,9 +3,10 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import CameraFeed from './components/CameraFeed';
 import AudioRecorder from './components/AudioRecorder';
 import AnalysisResult from './components/AnalysisResult';
-import { streamAnalyzeDog } from './services/geminiService';
+import { streamAnalyzeDog, textToSpeech } from './services/geminiService';
 import DogTraining from './components/DogTraining';
 import { PawPrintIcon } from './components/icons';
+import { useAudioPlayer } from './hooks/useAudioPlayer';
 
 type AudioStatus = 'idle' | 'generating' | 'playing';
 
@@ -23,8 +24,11 @@ const App: React.FC = () => {
   const [isStreamingAnalysis, setIsStreamingAnalysis] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   
-  const [audioStatus, setAudioStatus] = useState<AudioStatus>('idle');
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const { playAudio, stopAudio, isPlaying } = useAudioPlayer();
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const audioRequestCancelled = useRef(false);
+
+  const audioStatus: AudioStatus = isGeneratingAudio ? 'generating' : isPlaying ? 'playing' : 'idle';
 
   useEffect(() => {
     try {
@@ -61,41 +65,35 @@ const App: React.FC = () => {
     }
   }, [capturedImage, soundDescription]);
 
-  const handleReadAloud = useCallback(() => {
-    if (!analysis || audioStatus !== 'idle' || !window.speechSynthesis) return;
+  const handleReadAloud = useCallback(async () => {
+    if (!analysis || audioStatus !== 'idle') return;
 
-    const utterance = new SpeechSynthesisUtterance(analysis);
-    utterance.lang = 'fa-IR';
-    utterance.rate = 0.9;
-    
-    utterance.onstart = () => {
-      setAudioStatus('playing');
-    };
-    
-    utterance.onend = () => {
-      setAudioStatus('idle');
-      utteranceRef.current = null;
-    };
-    
-    utterance.onerror = (event) => {
-      console.error('SpeechSynthesis Error:', event.error);
-      setError(`خطا در پخش صدا: ${event.error}`);
-      setAudioStatus('idle');
-      utteranceRef.current = null;
-    };
-    
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    audioRequestCancelled.current = false;
+    setIsGeneratingAudio(true);
+    setError('');
 
-  }, [analysis, audioStatus]);
+    try {
+      const base64Audio = await textToSpeech(analysis);
+      if (base64Audio && !audioRequestCancelled.current) {
+        await playAudio(base64Audio);
+      }
+    } catch (err: any) {
+      if (!audioRequestCancelled.current) {
+        console.error('TTS or playback error:', err);
+        const displayMessage = err?.toString() || 'لطفاً دوباره تلاش کنید.';
+        setError(`خطا در تولید یا پخش صدا: ${displayMessage}`);
+      }
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  }, [analysis, audioStatus, playAudio]);
 
   const handleStopReading = useCallback(() => {
-    if (window.speechSynthesis && utteranceRef.current) {
-      window.speechSynthesis.cancel();
-      setAudioStatus('idle');
-      utteranceRef.current = null;
-    }
-  }, []);
+    audioRequestCancelled.current = true;
+    stopAudio();
+    setIsGeneratingAudio(false);
+  }, [stopAudio]);
+
 
   const isAnalyzeButtonEnabled = !isStreamingAnalysis && !!capturedImage && !!soundDescription;
 

@@ -1,8 +1,7 @@
+
 import { GoogleGenAI, Modality, FinishReason } from "@google/genai";
 
-// The API key is embedded directly in the application as requested.
-const API_KEY = "AIzaSyCnZzttoZmpczB0Z4icdomTlzrKxnhIbQo";
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function* streamAnalyzeDog(imageBase64: string, soundDescription: string) {
     const model = 'gemini-2.5-flash';
