@@ -1,10 +1,9 @@
-
 import React from 'react';
 
+// این کامپوننت در حال حاضر در اپلیکیشن استفاده نمی‌شود.
+// اسپینرهای لودینگ در صورت نیاز مستقیماً با کلاس‌های Tailwind CSS پیاده‌سازی شده‌اند.
 const Loader: React.FC = () => {
-  return (
-    <div className="w-8 h-8 border-4 border-t-transparent border-white rounded-full animate-spin"></div>
-  );
+  return null;
 };
 
 export default Loader;
