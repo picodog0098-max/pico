@@ -1,6 +1,6 @@
 {
-  "name": "1",
-  "description": "An application that uses AI to analyze a dog's behavior and sounds from your camera and microphone, and then reads the analysis aloud.",
+  "name": "Hapohub",
+  "description": "یک دستیار هوشمند، دلسوز و متخصص برای صاحبان سگ. این اپلیکیشن به صورت اصلی از طریق صدا (فارسی) کار می‌کند، اما رابط کاربری چت نوشتاری و چندرسانه‌ای غنی نیز دارد.",
   "requestFramePermissions": [
     "camera",
     "microphone"
